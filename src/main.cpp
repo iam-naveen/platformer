@@ -1,4 +1,5 @@
 #include <SFML/Graphics.hpp>
+#include <iostream>
 
 
 class Animation;
@@ -11,7 +12,7 @@ class Collider{
         body(Body)
     {}
     ~Collider(){}
-    void move(float dx, float dy){
+    void Move(float dx, float dy){
         body.move({dx,dy});
     }
     bool checkCollision(Collider& other, float push){
@@ -19,32 +20,32 @@ class Collider{
         sf::Vector2f otherHalfSize = other.GetHalfSize();
         sf::Vector2f thisPosition = Getposition();
         sf::Vector2f thisHalfSize = GetHalfSize();
-        float deltax = otherPosition.x-thisPosition.x;
+        float deltax = otherPosition.x - thisPosition.x;
         float deltay = otherPosition.y-thisPosition.y;
         
-        float intersectx = abs(deltax) - (otherPosition.x + thisPosition.x);
-        float intersecty = abs(deltay) - (otherPosition.y + thisPosition.y);
+        float intersectx = abs(deltax) - (otherHalfSize.x + thisHalfSize.x);
+        float intersecty = abs(deltay) - (otherHalfSize.y + thisHalfSize.y);
         if(intersectx<0.0f && intersecty<0.0f){
             push = std::min(std::max(push,0.0f),1.0f);
             if(intersectx > intersecty){
                 if(deltax>0.0f){
-                    move(intersectx*(1.0f - push), 0.0f);
-                    other.move(-intersectx * push, 0.0f);
+                    Move(intersectx*(1.0f - push), 0.0f);
+                    other.Move(-intersectx * push, 0.0f);
                 }
                 else{
-                    move(-intersectx*(1.0f - push), 0.0f);
-                    other.move(intersectx * push, 0.0f);
+                    Move(-intersectx*(1.0f - push), 0.0f);
+                    other.Move(intersectx * push, 0.0f);
                 }
                 
             }
             else{
                 if(deltay>0.0f){
-                    move(0.0f, intersecty*(1.0f - push));
-                    other.move(0.0f, -intersecty * push);
+                    Move(0.0f, intersecty*(1.0f - push));
+                    other.Move(0.0f, -intersecty * push);
                 }
                 else{
-                    move( 0.0f, -intersecty*(1.0f - push));
-                    other.move( 0.0f, intersecty * push);
+                    Move( 0.0f, -intersecty*(1.0f - push));
+                    other.Move( 0.0f, intersecty * push);
                 }
                 
             }
@@ -83,8 +84,8 @@ class Animation{
             totalTime = 0.0f;
             currentImage.x =  0;
     
-            uvRect.size.x = texture->getSize().x / (float)imagecount.x;
-            uvRect.size.y = texture->getSize().y / (float)imagecount.y;
+            uvRect.width = texture->getSize().x / (float)imagecount.x;
+            uvRect.height = texture->getSize().y / (float)imagecount.y;
         }
         ~Animation(){}
     
@@ -101,16 +102,19 @@ class Animation{
                 }
             }
     
-            uvRect.position.y = currentImage.y * uvRect.size.y;
+            uvRect.top = currentImage.y * uvRect.height;
             if(faceRight){
-                uvRect.position.x = currentImage.x * uvRect.size.x;
-                uvRect.size.x = abs(uvRect.size.x);
+                uvRect.left = currentImage.x * uvRect.width;
+                uvRect.width = abs(uvRect.width);
             }
             else{
-                uvRect.position.x = (currentImage.x+1) * abs(uvRect.size.x);
-                uvRect.size.x = -abs(uvRect.size.x);
+                uvRect.left = (currentImage.x+1) * abs(uvRect.width);
+                uvRect.width = -abs(uvRect.width);
             }
     
+        }
+        void changeImageCout(sf::Vector2u imagecount){
+            this->imageCount = imagecount;
         }
         
     };
@@ -151,9 +155,8 @@ class Player{
         this->speed = Speed;
         row = 0;
         faceRight = true;
-        body.setSize({100,100});
+        body.setSize(sf::Vector2f(100,150));
         body.setOrigin(body.getSize()/ 2.0f);
-        sf::Texture playerTexture("sprite.png");
         body.setPosition({400 , 300});
         body.setTexture(texture);
     }
@@ -172,7 +175,7 @@ class Player{
         if(movement.x ==0.0f){
             row = 0;}
         else{
-            row = 1;
+            //row = 1;
             if(movement.x > 0){
                 faceRight = true;
             }
@@ -180,12 +183,15 @@ class Player{
                 faceRight = false;
             }
         }
-    
+        
         animation.update(row, deltaTime, faceRight);
         body.setTextureRect(animation.uvRect);
         body.move(movement);
     }
     
+    void changeimagecount(sf::Vector2u imagecount){
+        animation.changeImageCout(imagecount);
+    }
     
     void draw(sf::RenderWindow& window){
         window.draw(body);
@@ -215,37 +221,39 @@ int main()
 {
     sf::RenderWindow window(sf::VideoMode({800,600}), "My Window", sf::Style::Close   | sf::Style::Resize);
     sf::View view({0.0f, 0.0f},{512.0f, 512.0f});
-    sf::Texture playerTexture("sprite.png");
+    sf::Texture playerTexture;
+    playerTexture.loadFromFile("assets/sprite.png");
     //window.setFramerateLimit(24);
-    Player player(&playerTexture,{8, 4}, 0.12f, 100.0f);
+    Player player(&playerTexture,{20, 1}, 0.12f, 100.0f);
     //playerTexture.setRepeated(true);
     Platform platform1(nullptr, {100.0f, 100.0f},{50.0f,0.0f});
     Platform platform2(nullptr, {200.0f, 400.0f},{100.0f,100.0f});
     Collider col = player.getCollider(); 
     float deltaTime = 0.0f;
     sf::Clock clock;
-
+    
     while (window.isOpen())
     {
         deltaTime = clock.restart().asSeconds();
-        while (const std::optional event = window.pollEvent())
+        sf::Event evnt;
+        while (window.pollEvent(evnt))
         {
-            if (event->is<sf::Event::Closed>()){
-            window.close();
+            if (evnt.type == sf::Event::Closed){
+                window.close();
             }
-            if (event->is<sf::Event::Resized>()){
+            if (evnt.type == sf::Event::Resized){
                 ResizeView(window, view);
             }  
         }
-
+        
         player.update(deltaTime);
         
-
+        
         platform1.getCollider().checkCollision(col, 0.5f);
         //platform2.getCollider().checkCollision(player.getCollider(), 1.0f);
         
         view.setCenter(player.getposition());
-
+        
         window.clear(sf::Color::Blue);
         window.setView(view);
         platform1.draw(window);

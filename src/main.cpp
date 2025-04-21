@@ -1,5 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
+#include <vector>
 
 
 class Animation;
@@ -15,7 +16,7 @@ class Collider{
     void Move(float dx, float dy){
         body.move({dx,dy});
     }
-    bool checkCollision(Collider& other, float push){
+    bool checkCollision(Collider& other, sf:: Vector2f& direction, float push){
         sf::Vector2f otherPosition = other.Getposition();
         sf::Vector2f otherHalfSize = other.GetHalfSize();
         sf::Vector2f thisPosition = Getposition();
@@ -31,10 +32,14 @@ class Collider{
                 if(deltax>0.0f){
                     Move(intersectx*(1.0f - push), 0.0f);
                     other.Move(-intersectx * push, 0.0f);
+                    direction.x = 1.0f;
+                    direction.y = 0.0f;
                 }
                 else{
                     Move(-intersectx*(1.0f - push), 0.0f);
                     other.Move(intersectx * push, 0.0f);
+                    direction.x = - 1.0f ;
+                    direction.y = 0.0f ;
                 }
                 
             }
@@ -42,10 +47,14 @@ class Collider{
                 if(deltay>0.0f){
                     Move(0.0f, intersecty*(1.0f - push));
                     other.Move(0.0f, -intersecty * push);
+                    direction.x = 0.0f;
+                    direction.y = -1.0f;
                 }
                 else{
                     Move( 0.0f, -intersecty*(1.0f - push));
                     other.Move( 0.0f, intersecty * push);
+                    direction.x = 0.0f;
+                    direction.y = 1.0f;
                 }
                 
             }
@@ -64,6 +73,46 @@ class Collider{
         sf::RectangleShape& body;
     
 };
+class Object{
+    private:
+    sf::RectangleShape objBody;
+    sf::Vector2f velocity;
+    float speed = 90.0f;
+    sf::Vector2f range;
+
+public:
+    Object(sf::Texture* texture, sf::Vector2f size, sf::Vector2f position, sf::Vector2f range){
+        this->range = range;
+        objBody.setSize(size);
+        objBody.setOrigin(size / 2.0f);
+        objBody.setTexture(texture);
+        objBody.setPosition(position);
+    }
+    
+    void update(float deltaTime){
+        if(objBody.getPosition().y >= range.y){
+            speed= - std::abs(speed);
+        }
+        if(objBody.getPosition().y <= range.x){
+            speed= std::abs(speed);
+        }
+        velocity.x = 0.0f;
+        velocity.y = speed;
+        objBody.move(velocity * deltaTime); 
+    }
+    void draw(sf::RenderWindow& window){
+        window.draw(objBody);
+    }
+    Collider getCollider(){
+        return Collider(objBody);
+    }
+    sf::Vector2f getposition(){
+        return objBody.getPosition();
+    }
+
+};
+
+
 
 
 class Animation{
@@ -97,7 +146,7 @@ class Animation{
                 totalTime -=switchTime;
                 currentImage.x ++;
     
-                if(currentImage.x >= imageCount.x){
+                if(currentImage.x >= 8){
                     currentImage.x = 0;
                 }
             }
@@ -147,12 +196,21 @@ class Player{
     unsigned int row;
     float speed;
     bool faceRight;
+    float gravity = 981;
+
+    sf::Vector2f velocity;
+    bool canjump;
+    float jumpheight;
+
+
+
     public:
     sf::RectangleShape body;
-    Player(sf::Texture *texture, sf::Vector2u imagecount, float switchtime, float Speed):
+    Player(sf::Texture *texture, sf::Vector2u imagecount, float switchtime, float Speed, float jumpheight):
     animation(texture, imagecount, switchtime)
     {
         this->speed = Speed;
+        this->jumpheight = jumpheight;
         row = 0;
         faceRight = true;
         body.setSize(sf::Vector2f(30,45));
@@ -161,22 +219,34 @@ class Player{
         body.setTexture(texture);
     }
     void update(float deltaTime){
-        sf::Vector2f movement(0.0f, 0.0f);
-    
+        velocity.x = 0.0f; 
+        //RIGHT MOVEMENT
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)){
-            movement.x += speed * deltaTime;}
+            if(body.getPosition().x <= 785){
+                velocity.x += speed;}
+        }
+
+        //LEFT MOVEMENT
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)){
-            movement.x -= speed * deltaTime;}
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up)){
-            movement.y -= speed * deltaTime;}
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down)){
-            movement.y += speed * deltaTime;}
+            if(body.getPosition().x >= 15){
+                velocity.x -= speed;
+            }
+        }
+
+        //JUMP MOVEMENT
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space) && canjump){
+            canjump = false;
+            velocity.y = -sqrtf(2.0f * gravity * jumpheight);
+        }
+        velocity.y += (gravity * deltaTime);
     
-        if(movement.x ==0.0f){
-            row = 0;}
+    
+        if(velocity.x ==0.0f){
+            row = 0;
+        }
         else{
-            //row = 1;
-            if(movement.x > 0){
+            row = 1;
+            if(velocity.x > 0){
                 faceRight = true;
             }
             else{
@@ -186,16 +256,34 @@ class Player{
         
         animation.update(row, deltaTime, faceRight);
         body.setTextureRect(animation.uvRect);
-        body.move(movement);
-    }
-    
-    void changeimagecount(sf::Vector2u imagecount){
-        animation.changeImageCout(imagecount);
+        body.move(velocity * deltaTime); 
     }
     
     void draw(sf::RenderWindow& window){
         window.draw(body);
     }
+
+    void onCollision(sf:: Vector2f direction){
+        if(direction.x < 0.0f){
+            //collision on left
+            velocity.x = 0.0f;
+        }
+        else if(direction.x > 0.0f){
+            //collision on right    
+            velocity.x = 0.0f;
+        }
+        if(direction.y > 0.0f){
+            //collision on bottom
+            velocity.y = 0.0f;
+            canjump = true;
+        }
+        else if(direction.y < 0.0f){
+            //collision on top   
+            velocity.y = 0.0f;
+        }
+
+    }
+
     sf::Vector2f getposition(){
         return body.getPosition();
     }
@@ -220,32 +308,60 @@ void ResizeView(const sf::RenderWindow& window, sf::View& view ){
 int main()
 {   
     sf::Vector2f viewCenter;
+    sf::RectangleShape background;
+    sf::Texture backgroundt;
+    backgroundt.loadFromFile("assets/background.png");
+    background.setSize(sf:: Vector2f(800, 500));
+    background.setPosition(0,0);
+    background.setTexture(&backgroundt);
+
     sf::RenderWindow window(sf::VideoMode({800,500}), "My Window", sf::Style::Close   | sf::Style::Resize);
     sf::View view({200.0f, 125.0f},{400.0f, 250.0f});
     sf::Texture playerTexture;
     playerTexture.loadFromFile("assets/sprite.png");
+    
+    sf::Texture box;
+    box.loadFromFile("assets/box.png");
+    
+    sf::Texture mud;
+    mud.loadFromFile("assets/mud.png");
+    
+
+
     //window.setFramerateLimit(24);
-    Player player(&playerTexture,{20, 1}, 0.12f, 100.0f);
+    Player player(&playerTexture,{14, 8}, 0.12f, 100.0f, 60.0f);
+    Object object(&mud, {70.0f, 30.0f}, {652.0f,335.0f}, {120.0f,420.0f});
     //playerTexture.setRepeated(true);
-
-
-    Platform platform1(nullptr, {100.0f,25.0f},{50.0f, 150.0f});
-    Platform platform2(nullptr, {50.0f, 25.0f},{170.0f,220.0f});
-    Platform platform3(nullptr, {35.0f,35.0f},{50.0f, 255.0f});
-    Platform platform4(nullptr, {100.0f, 25.0f},{50.0f,285.0f});
-    Platform platform5(nullptr, {26.0f,153.0f},{13.0f, 374.0f});
-    Platform platform6(nullptr, {800.0f, 50.0f},{400.0f,475.0f});
-    Platform platform7(nullptr, {145.0f, 25.0f},{170.0f,380.0f});
-    Platform platform8(nullptr, {25.0f, 147.0f},{340.0f,377.0f});
-    Platform platform9(nullptr, {125.0f, 25.0f},{290.0f,290.0f});
-    Platform platform10(nullptr, {130.0f, 25.0f},{520.0f,236.0f});
-    Platform platform11(nullptr, {25.0f, 148.0f},{573.0f,149.0f});
-    Platform platform12(nullptr, {50.0f, 25.0f},{420.0f,410.0f});
-    Platform platform13(nullptr, {50.0f, 25.0f},{510.0f,370.0f});
-    Platform platform14(nullptr, {30.0f, 130.0f},{570.0f,385.0f});
-    Platform platform15(nullptr, {70.0f, 30.0f},{652.0f,335.0f});
-    Platform platform16(nullptr, {100.0f, 30.0f},{750.0f,135.0f});
+    
+    
+    
+    
+    
+    
+    
+    std::vector<Platform> platforms;
+    
+    Platform Box(&box , {35.0f,35.0f},{50.0f, 255.0f});
+    platforms.push_back(Platform(&mud, {100.0f,25.0f},{50.0f, 150.0f}));
+    platforms.push_back(Platform(&mud, {50.0f, 25.0f},{170.0f,220.0f}));
+    platforms.push_back(Platform(&mud, {100.0f, 25.0f},{50.0f,285.0f}));
+    platforms.push_back(Platform(&mud, {26.0f,153.0f},{13.0f, 374.0f}));
+    platforms.push_back(Platform(&mud, {800.0f, 50.0f},{400.0f,475.0f}));
+    platforms.push_back(Platform(&mud, {145.0f, 25.0f},{170.0f,420.0f}));
+    platforms.push_back(Platform(&mud, {25.0f, 147.0f},{340.0f,377.0f}));
+    platforms.push_back(Platform(&mud, {125.0f, 25.0f},{290.0f,290.0f}));
+    platforms.push_back(Platform(&mud, {130.0f, 25.0f},{520.0f,236.0f}));
+    platforms.push_back(Platform(&mud, {25.0f, 148.0f},{573.0f,149.0f}));
+    platforms.push_back(Platform(&mud, {50.0f, 25.0f},{420.0f,410.0f}));
+    platforms.push_back(Platform(&mud, {50.0f, 25.0f},{510.0f,370.0f}));
+    platforms.push_back(Platform(&mud, {30.0f, 130.0f},{570.0f,385.0f}));
+    //platforms.push_back(Platform(&mud, {70.0f, 30.0f},{652.0f,335.0f}));
+    platforms.push_back(Platform(&mud, {100.0f, 30.0f},{750.0f,135.0f}));
+    
+    
+    Collider col1 = Box.getCollider();
     Collider col = player.getCollider(); 
+
     float deltaTime = 0.0f;
     sf::Clock clock;
     
@@ -262,28 +378,31 @@ int main()
                 ResizeView(window, view);
             }  
         }
-        //std::cout<<player.getposition().x <<"  "<<player.getposition().y<<std::endl;
+
         player.update(deltaTime);
+        object.update(deltaTime);
+
+        sf::Vector2f direction;
+
+        for(Platform& platform: platforms){
+            if(platform.getCollider().checkCollision(col, direction, 1.0f)){
+                player.onCollision(direction);
+            }
+        }
         
-        
-        platform1.getCollider().checkCollision(col, 1.0f);
-        platform2.getCollider().checkCollision(col, 1.0f);
-        platform3.getCollider().checkCollision(col, 0.0f);
-        platform3.getCollider().checkCollision(col, 0.0f);
-        platform4.getCollider().checkCollision(col, 1.0f);
-        platform5.getCollider().checkCollision(col, 1.0f);
-        platform6.getCollider().checkCollision(col, 1.0f);
-        platform7.getCollider().checkCollision(col, 1.0f);
-        platform8.getCollider().checkCollision(col, 1.0f);
-        platform9.getCollider().checkCollision(col, 1.0f);
-        platform10.getCollider().checkCollision(col, 1.0f);
-        platform11.getCollider().checkCollision(col, 1.0f);
-        platform12.getCollider().checkCollision(col, 1.0f);
-        platform13.getCollider().checkCollision(col, 1.0f);
-        platform14.getCollider().checkCollision(col, 1.0f);
-        platform15.getCollider().checkCollision(col, 1.0f);
-        platform16.getCollider().checkCollision(col, 1.0f);
-        
+        for(Platform& platform: platforms){
+            if(platform.getCollider().checkCollision(col1, direction, 1.0f)){
+                player.onCollision(direction);
+            }
+        }
+        if(Box.getCollider().checkCollision(col, direction, 0.5f)){
+            player.onCollision(direction);
+        }
+        if(object.getCollider().checkCollision(col, direction, 1.0f)){
+            player.onCollision(direction);
+        }
+
+
         if(player.getposition().x <=200){
             viewCenter.x = 200;
         }
@@ -306,24 +425,12 @@ int main()
         
         window.clear(sf::Color::Blue);
         window.setView(view);
-
-        platform1.draw(window);
-        platform2.draw(window);
-        platform3.draw(window);
-        platform4.draw(window);
-        platform5.draw(window);
-        platform6.draw(window);
-        platform7.draw(window);
-        platform8.draw(window);
-        platform9.draw(window);
-        platform10.draw(window);
-        platform11.draw(window);
-        platform12.draw(window);
-        platform13.draw(window);
-        platform14.draw(window);
-        platform15.draw(window);
-        platform16.draw(window);
-
+        window.draw(background);
+        for(Platform& platform: platforms){
+            platform.draw(window);
+        }
+        Box.draw(window);
+        object.draw(window);
         player.draw(window);
         window.display();
     

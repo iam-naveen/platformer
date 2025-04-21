@@ -60,10 +60,88 @@ class Collider {
   private:
     RectangleShape &body;
 };
-class Object {
-  private:
-    RectangleShape objBody;
-    Vector2f velocity;
+
+class Box{
+private:
+
+public:
+
+private:
+    float speed;
+    float gravity = 981;
+    sf::RectangleShape body;
+    sf::Vector2f velocity;
+
+
+
+    public:
+    Box( sf::Texture*texture , sf::Vector2f size, sf::Vector2f position)
+    {
+        body.setSize(size);
+        body.setOrigin(body.getSize()/ 2.0f);
+        body.setPosition(position);
+        body.setTexture(texture);
+    }
+    void update(float deltaTime){
+        velocity.x = 0.0f; 
+
+
+        velocity.y += (gravity * deltaTime);
+        body.move(velocity * deltaTime); 
+    }
+    
+    void draw(sf::RenderWindow& window){
+        window.draw(body);
+    }
+
+    void onCollision(sf:: Vector2f direction){
+        if(direction.x < 0.0f || direction.x > 0.0f){
+            //collision on left or right
+            velocity.x = 0.0f;
+        }
+        if(direction.y > 0.0f || direction.y < 0.0f){
+            //collision on bottom or top
+            velocity.y = 0.0f;
+        }
+    }
+    sf::Vector2f getposition(){
+        return body.getPosition();
+    }
+    Collider getCollider(){
+        return Collider(body);       
+    }
+    
+};
+
+class Key{
+    private:
+    bool exist = true;
+    sf::RectangleShape body;
+
+    public:
+    Key(sf::Texture* texture, sf::Vector2f position, sf::Vector2f size){
+        body.setPosition(position);
+        body.setSize(size);
+        body.setTexture(texture);
+    }
+
+    void draw(sf::RenderWindow& window){
+        if(exist == true){
+            window.draw(body);
+        }
+    }
+    void False(){
+        exist = false;
+    }
+    Collider getCollider(){
+        return Collider(body);
+    }
+    
+};
+class Object{
+    private:
+    sf::RectangleShape objBody;
+    sf::Vector2f velocity;
     float speed = 90.0f;
     Vector2f range;
 
@@ -154,17 +232,22 @@ class Platform {
     void draw(RenderWindow &window) { window.draw(body); }
     Collider getCollider() { return Collider(body); }
 };
-
-class Player {
-  private:
+    
+class Player{
+    private:
+    bool hasKey = false;
     Animation animation;
     unsigned int row;
     float speed;
     bool faceRight;
     float gravity = 981;
 
+    sf::Clock clock;
+    float elapse = 0.0f;
+
     Vector2f velocity;
     bool canjump;
+    bool candoublejump;
     float jumpheight;
 
   public:
@@ -196,12 +279,23 @@ class Player {
                 velocity.x -= speed;
             }
         }
+        //JUMP MOVEMENT
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)){
+            if(canjump){
+                elapse = clock.restart().asSeconds();
+                canjump = false;
+                velocity.y = -sqrtf(2.0f * gravity * jumpheight);
+            }
+            if(candoublejump){
+                elapse = clock.restart().asSeconds();
+                if(elapse > 0.2f && elapse < 0.4f){
 
-        // JUMP MOVEMENT
-        if (Keyboard::isKeyPressed(Keyboard::Key::Space) && canjump) {
-            canjump = false;
-            velocity.y = -sqrtf(2.0f * gravity * jumpheight);
+                    candoublejump = false;
+                    velocity.y = -sqrtf( 1.25f* gravity * jumpheight);
+                }
+            } 
         }
+        
         velocity.y += (gravity * deltaTime);
 
         if (velocity.x == 0.0f) {
@@ -234,15 +328,21 @@ class Player {
             // collision on bottom
             velocity.y = 0.0f;
             canjump = true;
-        } else if (direction.y < 0.0f) {
-            // collision on top
+            candoublejump = true;
+        }
+        else if(direction.y < 0.0f){
+            //collision on top   
             velocity.y = 0.0f;
         }
+    }
+    void KeyObtained(){
+        hasKey = true;
     }
 
     Vector2f getposition() { return body.getPosition(); }
     Collider getCollider() { return Collider(body); }
 };
+
 
 static const float VIEW_HEIGHT = 512.0f;
 
@@ -250,53 +350,62 @@ void ResizeView(const RenderWindow &window, View &view) {
     float aspectratio = float(window.getSize().x) / float(window.getSize().y);
     view.setSize({VIEW_HEIGHT * aspectratio, VIEW_HEIGHT});
 }
-int main() {
-    Vector2f viewCenter;
-    RectangleShape background;
-    Texture backgroundt;
+
+
+
+
+
+int main()
+{   
+    
+    sf::RenderWindow window(sf::VideoMode({800,500}), "My Platformer", sf::Style::Close   | sf::Style::Resize);
+    sf::View view({200.0f, 125.0f},{400.0f, 250.0f});
+    sf::Vector2f viewCenter;
+
+    sf::RectangleShape background;
+    sf::Texture backgroundt;
     backgroundt.loadFromFile("assets/background.png");
     background.setSize(Vector2f(800, 500));
     background.setPosition(0, 0);
     background.setTexture(&backgroundt);
 
-    RenderWindow window(VideoMode({800, 500}), "My Window",
-                        Style::Close | Style::Resize);
-    View view({200.0f, 125.0f}, {400.0f, 250.0f});
-    Texture playerTexture;
+    sf::Texture playerTexture;
     playerTexture.loadFromFile("assets/sprite.png");
-
-    Texture box;
-    box.loadFromFile("assets/box.png");
-
-    Texture mud;
+    sf::Texture boxt;
+    boxt.loadFromFile("assets/box.png");
+    sf::Texture mud;
     mud.loadFromFile("assets/mud.png");
+    sf::Texture keyt;
+    keyt.loadFromFile("assets/box.png");
 
-    // window.setFramerateLimit(24);
-    Player player(&playerTexture, {14, 8}, 0.12f, 100.0f, 60.0f);
-    Object object(&mud, {70.0f, 30.0f}, {652.0f, 335.0f}, {120.0f, 420.0f});
-    // playerTexture.setRepeated(true);
 
+    Player player(&playerTexture,{14, 8}, 0.12f, 100.0f, 80.0f);
+    Object object(&mud, {70.0f, 30.0f}, {652.0f,335.0f}, {120.0f,420.0f});
+    Key key(&keyt,{55.0f, 425.0f},{25.0f, 25.0f});
+    Box box(&boxt , {35.0f,35.0f},{60.0f, 255.0f});
+    
+    
+    
     std::vector<Platform> platforms;
-
-    Platform Box(&box, {35.0f, 35.0f}, {50.0f, 255.0f});
-    platforms.push_back(Platform(&mud, {100.0f, 25.0f}, {50.0f, 150.0f}));
-    platforms.push_back(Platform(&mud, {50.0f, 25.0f}, {170.0f, 220.0f}));
-    platforms.push_back(Platform(&mud, {100.0f, 25.0f}, {50.0f, 285.0f}));
-    platforms.push_back(Platform(&mud, {26.0f, 153.0f}, {13.0f, 374.0f}));
-    platforms.push_back(Platform(&mud, {800.0f, 50.0f}, {400.0f, 475.0f}));
-    platforms.push_back(Platform(&mud, {145.0f, 25.0f}, {170.0f, 420.0f}));
-    platforms.push_back(Platform(&mud, {25.0f, 147.0f}, {340.0f, 377.0f}));
-    platforms.push_back(Platform(&mud, {125.0f, 25.0f}, {290.0f, 290.0f}));
-    platforms.push_back(Platform(&mud, {130.0f, 25.0f}, {520.0f, 236.0f}));
-    platforms.push_back(Platform(&mud, {25.0f, 148.0f}, {573.0f, 149.0f}));
-    platforms.push_back(Platform(&mud, {50.0f, 25.0f}, {420.0f, 410.0f}));
-    platforms.push_back(Platform(&mud, {50.0f, 25.0f}, {510.0f, 370.0f}));
-    platforms.push_back(Platform(&mud, {30.0f, 130.0f}, {570.0f, 385.0f}));
-    // platforms.push_back(Platform(&mud, {70.0f, 30.0f},{652.0f,335.0f}));
-    platforms.push_back(Platform(&mud, {100.0f, 30.0f}, {750.0f, 135.0f}));
-
-    Collider col1 = Box.getCollider();
-    Collider col = player.getCollider();
+    platforms.push_back(Platform(&mud, {100.0f,25.0f},{50.0f, 150.0f}));
+    platforms.push_back(Platform(&mud, {50.0f, 25.0f},{170.0f,220.0f}));
+    platforms.push_back(Platform(&mud, {130.0f, 25.0f},{50.0f,285.0f}));
+    platforms.push_back(Platform(&mud, {26.0f,153.0f},{13.0f, 374.0f}));
+    platforms.push_back(Platform(&mud, {800.0f, 50.0f},{400.0f,475.0f}));
+    platforms.push_back(Platform(&mud, {145.0f, 25.0f},{170.0f,420.0f}));
+    platforms.push_back(Platform(&mud, {25.0f, 147.0f},{340.0f,377.0f}));
+    platforms.push_back(Platform(&mud, {125.0f, 25.0f},{290.0f,290.0f}));
+    platforms.push_back(Platform(&mud, {130.0f, 25.0f},{520.0f,236.0f}));
+    platforms.push_back(Platform(&mud, {25.0f, 148.0f},{573.0f,149.0f}));
+    platforms.push_back(Platform(&mud, {50.0f, 25.0f},{420.0f,410.0f}));
+    platforms.push_back(Platform(&mud, {50.0f, 25.0f},{510.0f,370.0f}));
+    platforms.push_back(Platform(&mud, {30.0f, 130.0f},{570.0f,385.0f}));
+    //platforms.push_back(Platform(&mud, {70.0f, 30.0f},{652.0f,335.0f}));
+    platforms.push_back(Platform(&mud, {100.0f, 30.0f},{750.0f,135.0f}));
+    
+    
+    Collider col1 = box.getCollider();
+    Collider col = player.getCollider(); 
 
     float deltaTime = 0.0f;
     Clock clock;
@@ -314,6 +423,7 @@ int main() {
         }
 
         player.update(deltaTime);
+        box.update(deltaTime);
         object.update(deltaTime);
 
         Vector2f direction;
@@ -323,20 +433,26 @@ int main() {
                 player.onCollision(direction);
             }
         }
-
-        for (Platform &platform : platforms) {
-            if (platform.getCollider().checkCollision(col1, direction, 1.0f)) {
-                player.onCollision(direction);
+        
+        for(Platform& platform: platforms){
+            if(platform.getCollider().checkCollision(col1, direction, 1.0f)){
+               box.onCollision(direction);
             }
         }
-        if (Box.getCollider().checkCollision(col, direction, 0.5f)) {
+        if(box.getCollider().checkCollision(col, direction, 0.5f)){
             player.onCollision(direction);
         }
         if (object.getCollider().checkCollision(col, direction, 1.0f)) {
             player.onCollision(direction);
         }
+        if(key.getCollider().checkCollision(col, direction, 0.0f)){
+            key.False();
+            player.KeyObtained();
+        }
 
-        if (player.getposition().x <= 200) {
+//--------------------------------------------------VIEW-----------------------------------------------------------
+
+        if(player.getposition().x <=200){
             viewCenter.x = 200;
         } else if (player.getposition().x >= 600) {
             viewCenter.x = 600;
@@ -351,16 +467,22 @@ int main() {
             viewCenter.y = player.getposition().y;
         }
         view.setCenter(viewCenter);
+//----------------------------------------------------------------------------------------------------------------------------
 
-        window.clear(Color::Blue);
+        
+        window.clear(sf::Color::Blue);
         window.setView(view);
+
+
         window.draw(background);
-        for (Platform &platform : platforms) {
-            platform.draw(window);
-        }
-        Box.draw(window);
+        for(Platform& platform: platforms){
+            platform.draw(window);}
+        box.draw(window);
         object.draw(window);
+        key.draw(window);
         player.draw(window);
+
+
         window.display();
     }
 }

@@ -267,20 +267,20 @@ class Player {
     void update(float deltaTime) {
         velocity.x = 0.0f;
         // RIGHT MOVEMENT
-        if (Keyboard::isKeyPressed(Keyboard::Key::Right)) {
+        if (Keyboard::isKeyPressed(Keyboard::Key::Right) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) {
             if (body.getPosition().x <= 785) {
                 velocity.x += speed;
             }
         }
 
         // LEFT MOVEMENT
-        if (Keyboard::isKeyPressed(Keyboard::Key::Left)) {
+        if (Keyboard::isKeyPressed(Keyboard::Key::Left) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) {
             if (body.getPosition().x >= 15) {
                 velocity.x -= speed;
             }
         }
         // JUMP MOVEMENT
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)) {
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) {
             if (canjump) {
                 elapse = clock.restart().asSeconds();
                 canjump = false;
@@ -288,7 +288,7 @@ class Player {
             }
             if (candoublejump) {
                 elapse = clock.restart().asSeconds();
-                if (elapse > 0.1f && elapse < 0.4f) {
+                if (elapse > 0.08f && elapse < 0.4f) {
 
                     candoublejump = false;
                     velocity.y = -sqrtf(1.25f * gravity * jumpheight);
@@ -404,7 +404,7 @@ int main() {
     background.setSize(Vector2f(800, 500));
     background.setPosition(0, 0);
     background.setTexture(&backgroundt);
-    
+
     //TEXTURES
     sf::Texture playerTexture;
     playerTexture.loadFromFile("assets/8x4sprite.png");
@@ -438,8 +438,8 @@ int main() {
     platforms.push_back(Platform(&mud, {26.0f, 153.0f}, {13.0f, 374.0f}));
     platforms.push_back(Platform(&ground, {800.0f, 50.0f}, {400.0f, 475.0f}));
     platforms.push_back(Platform(&grass, {145.0f, 25.0f}, {170.0f, 405.0f}));
-    platforms.push_back(Platform(&mud, {25.0f, 147.0f}, {340.0f, 377.0f}));
-    platforms.push_back(Platform(&grass, {125.0f, 25.0f}, {290.0f, 293.0f}));
+    platforms.push_back(Platform(&mud, {25.0f, 147.0f}, {340.0f, 375.0f}));
+    platforms.push_back(Platform(&grass, {125.0f, 25.0f}, {290.0f, 290.0f}));
     platforms.push_back(Platform(&grass, {130.0f, 25.0f}, {520.0f, 236.0f}));
     platforms.push_back(Platform(&mud, {25.0f, 148.0f}, {573.0f, 149.0f}));
     platforms.push_back(Platform(&grass, {50.0f, 25.0f}, {420.0f, 410.0f}));
@@ -495,7 +495,7 @@ int main() {
                 }
                 
             }    
-            if (box.getCollider().checkCollision(playerCollider, direction, 0.5f)) {
+            if (box.getCollider().checkCollision(playerCollider, direction, 0.6f)) {
                 player.onCollision(direction);
             }
             if (object.getCollider().checkCollision(playerCollider, direction, 1.0f)) {

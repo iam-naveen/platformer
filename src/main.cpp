@@ -9,6 +9,8 @@ class Animation;
 class Player;
 class Collider;
 
+
+//--------------------------------------COLLIDER CLASS-----------------------------------------
 class Collider {
   public:
     Collider(RectangleShape &Body) : body(Body) {}
@@ -62,7 +64,11 @@ class Collider {
   private:
     RectangleShape &body;
 };
+//------------------------------------------------------------------------------------------------
 
+
+
+//--------------------------------------BOX CLASS------------------------------------------------
 class Box {
   private:
     float speed;
@@ -100,6 +106,9 @@ class Box {
     Collider getCollider() { return Collider(body); }
 };
 
+//-----------------------------------------------------------------------------------------------
+
+//--------------------------------KEY CLASS-----------------------------------------------------
 class Key {
   private:
     bool exist = true;
@@ -120,7 +129,9 @@ class Key {
     void False() { exist = false; }
     Collider getCollider() { return Collider(body); }
 };
+//---------------------------------------------------------------------------------------------
 
+//=========================================OBJECT CLASS==========================================
 class Object {
   private:
     sf::RectangleShape objBody;
@@ -152,7 +163,9 @@ class Object {
     Collider getCollider() { return Collider(objBody); }
     Vector2f getposition() { return objBody.getPosition(); }
 };
+//==============================================================================================
 
+//======================================ANIMATION CLASS=======================================
 class Animation {
   public:
     IntRect uvRect;
@@ -199,7 +212,9 @@ class Animation {
         }
     }
 };
+//============================================================================================
 
+//=================================PLATFORM CLASS============================================
 class Platform {
   private:
     RectangleShape body;
@@ -215,7 +230,9 @@ class Platform {
     void draw(RenderWindow &window) { window.draw(body); }
     Collider getCollider() { return Collider(body); }
 };
+//=============================================================================================
 
+//============================= PLAYER CLASS====================================================
 class Player {
   private:
     bool hasKey = false;
@@ -353,45 +370,42 @@ class Player {
     Vector2f getposition() { return body.getPosition(); }
     Collider getCollider() { return Collider(body); }
 };
+//===========================================================================================
 
 
+//==================================MAIN FUNCTION============================================
 int main() {
-    bool is_game = true;
-
+    // TEXT
     sf::Font font;
     if (!font.loadFromFile("assets/PixellettersFull.ttf")) {
         cout << "Cannot Load Font" << endl;
     }
-
     sf::Text text;
-
-    // select the font
-    text.setFont(font); // font is a sf::Font
-    // set the string to display
+    text.setFont(font);
     text.setString("Congrats on Completing the Level!!");
-    // set the character size
-    text.setCharacterSize(24); // in pixels, not points!
-    // set the color
+    text.setCharacterSize(24);
     text.setFillColor(sf::Color::Red);
     text.setOutlineThickness(2.0f);
     text.setOutlineColor(Color::Black);
-    // set the text style
     text.setStyle(sf::Text::Bold | sf::Text::Underlined);
     
+    //WINDOW
     sf::RenderWindow window(sf::VideoMode({800, 500}), "My Platformer",
     sf::Style::Close);
+
+    //VIEW
     sf::View view({200.0f, 125.0f}, {400.0f, 250.0f});
     sf::Vector2f viewCenter;
 
-    
-    
+    //BACKGROUND
     sf::RectangleShape background;
     sf::Texture backgroundt;
     backgroundt.loadFromFile("assets/background.png");
     background.setSize(Vector2f(800, 500));
     background.setPosition(0, 0);
     background.setTexture(&backgroundt);
-
+    
+    //TEXTURES
     sf::Texture playerTexture;
     playerTexture.loadFromFile("assets/8x4sprite.png");
     sf::Texture boxt;
@@ -402,40 +416,49 @@ int main() {
     grass.loadFromFile("assets/grassblock.png");
     sf::Texture keyt;
     keyt.loadFromFile("assets/key.png");
+    sf::Texture ground;
+    ground.loadFromFile("assets/ground.png");
     sf::Texture doort;
     doort.loadFromFile("assets/door.png");
+
+    //START OF LEVEL 1
     start:
-    Player player(&playerTexture, {8, 4}, 0.12f, 100.0f, 80.0f);
+    bool is_game = true;
+    Player player(&playerTexture, {8, 4}, 0.12f, 100.0f, 70.0f);
     Object object(&grass, {70.0f, 30.0f}, {652.0f, 335.0f}, {120.0f, 420.0f});
     Key key(&keyt, {45.0f, 425.0f}, {25.0f, 25.0f});
     Box box(&boxt, {35.0f, 35.0f}, {60.0f, 255.0f});
     Platform Door(&doort, {45.0f, 70.0f},{760.0f,86.0f});
 
+    //------------------------------MAP-------------------------------------
     std::vector<Platform> platforms;
-    platforms.push_back(Platform(&mud, {100.0f, 25.0f}, {50.0f, 150.0f}));
-    platforms.push_back(Platform(&mud, {50.0f, 25.0f}, {170.0f, 220.0f}));
-    platforms.push_back(Platform(&mud, {130.0f, 25.0f}, {50.0f, 285.0f}));
+    platforms.push_back(Platform(&grass, {100.0f, 25.0f}, {50.0f, 150.0f}));
+    platforms.push_back(Platform(&grass, {50.0f, 25.0f}, {170.0f, 220.0f}));
+    platforms.push_back(Platform(&grass, {130.0f, 25.0f}, {50.0f, 285.0f}));
     platforms.push_back(Platform(&mud, {26.0f, 153.0f}, {13.0f, 374.0f}));
-    platforms.push_back(Platform(&mud, {800.0f, 50.0f}, {400.0f, 475.0f}));
-    platforms.push_back(Platform(&mud, {145.0f, 25.0f}, {170.0f, 420.0f}));
+    platforms.push_back(Platform(&ground, {800.0f, 50.0f}, {400.0f, 475.0f}));
+    platforms.push_back(Platform(&grass, {145.0f, 25.0f}, {170.0f, 405.0f}));
     platforms.push_back(Platform(&mud, {25.0f, 147.0f}, {340.0f, 377.0f}));
-    platforms.push_back(Platform(&mud, {125.0f, 25.0f}, {290.0f, 290.0f}));
-    platforms.push_back(Platform(&mud, {130.0f, 25.0f}, {520.0f, 236.0f}));
+    platforms.push_back(Platform(&grass, {125.0f, 25.0f}, {290.0f, 293.0f}));
+    platforms.push_back(Platform(&grass, {130.0f, 25.0f}, {520.0f, 236.0f}));
     platforms.push_back(Platform(&mud, {25.0f, 148.0f}, {573.0f, 149.0f}));
-    platforms.push_back(Platform(&mud, {50.0f, 25.0f}, {420.0f, 410.0f}));
-    platforms.push_back(Platform(&mud, {50.0f, 25.0f}, {510.0f, 370.0f}));
+    platforms.push_back(Platform(&grass, {50.0f, 25.0f}, {420.0f, 410.0f}));
+    platforms.push_back(Platform(&grass, {50.0f, 25.0f}, {510.0f, 370.0f}));
     platforms.push_back(Platform(&mud, {30.0f, 130.0f}, {570.0f, 385.0f}));
-    platforms.push_back(Platform(&mud, {100.0f, 30.0f}, {750.0f, 135.0f}));
+    platforms.push_back(Platform(&grass, {100.0f, 30.0f}, {750.0f, 135.0f}));
+    //-----------------------------------------------------------------------
+    
 
     Collider boxCollider = box.getCollider();
     Collider playerCollider = player.getCollider();
 
     float deltaTime = 0.0f;
     Clock clock;
-
+//=========================================================GAME LOOP========================================================================
     while (window.isOpen()) {
         deltaTime = clock.restart().asSeconds();
         Event evnt;
+        Vector2f direction;
         while (window.pollEvent(evnt)) {
             if (evnt.type == Event::Closed) {
                 window.close();
@@ -447,12 +470,13 @@ int main() {
         }
 
         if (is_game){
+            //-------------------------UPDATE---------------------------------
             player.update(deltaTime);
             box.update(deltaTime);
             object.update(deltaTime);
+            //---------------------------------------------------------------
             
-            Vector2f direction;
-            
+            //============================CHECKING FOR COLLISIONS==============================
             for (Platform &platform : platforms) {
                 if (platform.getCollider().checkCollision(playerCollider, direction, 1.0f)) {
                     player.onCollision(direction);
@@ -481,8 +505,11 @@ int main() {
                 key.False();
                 player.KeyObtained();
             }
-            
-            //--------------------------------------------------VIEW-----------------------------------------------------------
+            //===========================COLLISION BLOCK END=======================================
+
+
+
+        //------------------------------------------VIEW---------------------------------------------
             if (player.getposition().x <= 200) {
                 viewCenter.x = 200;
             } else if (player.getposition().x >= 600) {
@@ -498,9 +525,11 @@ int main() {
                 viewCenter.y = player.getposition().y;
             }
             view.setCenter(viewCenter);
-            //----------------------------------------------------------------------------------------------------------------------------
         }
-            
+        //---------------------------------------------------------------------------------------------
+
+
+        //====================================== DRAWING BLOCK ============================================    
         window.clear();
         window.setView(view);
         
@@ -520,5 +549,8 @@ int main() {
         }
         
         window.display();
+        //=================================================================================================
     }
+ //=====================================================GAME LOOP END======================================================================   
 }
+//========================================================MAIN FUNC END====================================================================
